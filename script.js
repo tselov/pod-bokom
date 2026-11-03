@@ -1,166 +1,53 @@
-'use strict';
+"use strict";
 
-// Примеры: замените значениями реальных свободных кладовых вместе с HTML-карточками.
-const units = {
-  '01': 'Кладовая 01 · 1 м² · 1 500 ₽/мес (пример)',
-  '02': 'Кладовая 02 · 2 м² · 2 500 ₽/мес (пример)',
-  '03': 'Кладовая 03 · 3 м² · 3 500 ₽/мес (пример)'
-};
-const requestDialog = document.querySelector('#request-dialog');
-const privacyDialog = document.querySelector('#privacy-dialog');
-const form = document.querySelector('#request-form');
-const fields = document.querySelector('#request-fields');
-const result = document.querySelector('#request-result');
-const phone = document.querySelector('#customer-phone');
-const customerName = document.querySelector('#customer-name');
-const error = document.querySelector('#form-error');
-const customerBuilding = document.querySelector('#customer-building');
-const customerSection = document.querySelector('#customer-section');
-const customerSectionField = document.querySelector('#customer-section-field');
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const scrollTo = element => element.scrollIntoView({ behavior: reducedMotion() ? 'instant' : 'smooth', block: 'start' });
 const menuToggle = document.querySelector('.menu-toggle');
 const mobileMenu = document.querySelector('#mobile-menu');
-let activeTrigger = null;
-let requestedUnitDescription = '';
-
-function updateRequestSummary() {
-  const parts = [];
-  if (customerBuilding.value) parts.push(`Корпус ${customerBuilding.value}`);
-  if (customerBuilding.value === '1' && customerSection.value) parts.push(`Секция ${customerSection.value}`);
-  parts.push(requestedUnitDescription || 'Подбор кладовой');
-  document.querySelector('#selection').textContent = parts.join(' · ');
-}
-
-function syncRequestSection() {
-  const supported = customerBuilding.value === '1';
-  customerSectionField.hidden = !supported;
-  customerSection.disabled = !supported;
-  if (!supported) customerSection.value = '';
-}
-customerBuilding.addEventListener('change', () => {
-  syncRequestSection();
-  updateRequestSummary();
-});
-customerSection.addEventListener('change', updateRequestSummary);
-
 function closeMenu() {
   mobileMenu.hidden = true;
   menuToggle.setAttribute('aria-expanded', 'false');
   menuToggle.setAttribute('aria-label', 'Открыть меню');
 }
 menuToggle.addEventListener('click', () => {
-  const opened = menuToggle.getAttribute('aria-expanded') === 'true';
-  mobileMenu.hidden = opened;
-  menuToggle.setAttribute('aria-expanded', String(!opened));
-  menuToggle.setAttribute('aria-label', opened ? 'Открыть меню' : 'Закрыть меню');
+  const open = menuToggle.getAttribute('aria-expanded') === 'true';
+  mobileMenu.hidden = open;
+  menuToggle.setAttribute('aria-expanded', String(!open));
+  menuToggle.setAttribute('aria-label', open ? 'Открыть меню' : 'Закрыть меню');
 });
 mobileMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && !mobileMenu.hidden) {
-    closeMenu();
-    menuToggle.focus();
-  }
+  if (event.key === 'Escape' && !mobileMenu.hidden) { closeMenu(); menuToggle.focus(); }
 });
-window.matchMedia('(min-width: 761px)').addEventListener('change', event => {
-  if (event.matches) closeMenu();
-});
+window.matchMedia('(min-width: 761px)').addEventListener('change', event => { if (event.matches) closeMenu(); });
 
-document.querySelectorAll('[data-request]').forEach(button => {
-  button.addEventListener('click', () => {
-    activeTrigger = mobileMenu.contains(button) ? menuToggle : button;
-    closeMenu();
-    requestedUnitDescription = units[button.dataset.unit] || '';
-    form.reset();
-    customerBuilding.value = button.dataset.building || '';
-    syncRequestSection();
-    customerSection.value = customerBuilding.value === '1' ? button.dataset.section || '' : '';
-    updateRequestSummary();
-    error.textContent = '';
-    phone.removeAttribute('aria-invalid');
-    customerName.setCustomValidity('');
-    fields.hidden = false;
-    result.hidden = true;
-    requestDialog.setAttribute('aria-labelledby', 'request-title');
-    requestDialog.showModal();
-    customerName.focus();
-  });
-});
-
-for (const dialog of [requestDialog, privacyDialog]) {
-  dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
-  // Закрываем только при нажатии и отпускании за пределами окна.
-  let outsideStart = false;
-  const isOutside = event => {
-    const box = dialog.getBoundingClientRect();
-    return event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
-  };
-  dialog.addEventListener('pointerdown', event => { outsideStart = isOutside(event); });
-  dialog.addEventListener('click', event => {
-    if (outsideStart && isOutside(event)) dialog.close();
-    outsideStart = false;
-  });
-  dialog.addEventListener('close', () => {
-    if (dialog === requestDialog) {
-      form.reset();
-      error.textContent = '';
-    }
-    if (activeTrigger) activeTrigger.focus();
-  });
+const slides = [...document.querySelectorAll('[data-slide]')];
+let activeSlide = 0;
+function showSlide(index) {
+  activeSlide = (index + slides.length) % slides.length;
+  slides.forEach((slide, i) => { slide.hidden = i !== activeSlide; });
+  document.querySelector('#hero-count').textContent = `${String(activeSlide + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
 }
-document.querySelector('#finish-request').addEventListener('click', () => requestDialog.close());
-document.querySelector('#privacy-open').addEventListener('click', event => {
-  activeTrigger = event.currentTarget;
-  privacyDialog.showModal();
-});
+document.querySelector('#slide-prev').addEventListener('click', () => showSlide(activeSlide - 1));
+document.querySelector('#slide-next').addEventListener('click', () => showSlide(activeSlide + 1));
 
-customerName.addEventListener('input', () => customerName.setCustomValidity(''));
-phone.addEventListener('input', () => {
-  phone.removeAttribute('aria-invalid');
-  error.textContent = '';
-});
-form.addEventListener('submit', event => {
-  event.preventDefault();
-  if (customerName.value.trim().length < 2) {
-    customerName.setCustomValidity('Введите имя: минимум две буквы или символа без пробелов по краям.');
-    customerName.reportValidity();
-    return;
-  }
-  const phoneText = phone.value.trim();
-  const digits = phoneText.replace(/\D/g, '');
-  if (!/^[+\d\s()\-]+$/.test(phoneText) || !/^[78]\d{10}$/.test(digits)) {
-    error.textContent = 'Проверьте телефон: нужно 11 цифр, первая — 7 или 8. Например: +7 (999) 123-45-67.';
-    phone.setAttribute('aria-invalid', 'true');
-    phone.focus();
-    return;
-  }
-  // Локальная демонстрация: никаких сетевых запросов и сохранения данных.
-  fields.hidden = true;
-  result.hidden = false;
-  requestDialog.setAttribute('aria-labelledby', 'result-title');
-  document.querySelector('#result-title').focus();
-  form.reset();
-});
-
-const cards = [...document.querySelectorAll('.unit-card')];
+const areaCards = [...document.querySelectorAll('.area-card')];
 document.querySelectorAll('[data-filter]').forEach(button => {
   button.addEventListener('click', () => {
-    const selected = button.dataset.filter;
     document.querySelectorAll('[data-filter]').forEach(filter => {
       const active = filter === button;
       filter.classList.toggle('active', active);
       filter.setAttribute('aria-pressed', String(active));
     });
     let count = 0;
-    cards.forEach(card => {
-      card.hidden = selected !== 'all' && card.dataset.size !== selected;
+    areaCards.forEach(card => {
+      card.hidden = button.dataset.filter !== 'all' && card.dataset.format !== button.dataset.filter;
       if (!card.hidden) count++;
     });
-    document.querySelector('#catalog-count').textContent = count === 1 ? '1 пример кладовой' : `${count} примера кладовых`;
+    document.querySelector('#format-count').textContent = count === 1 ? 'Показан 1 формат' : `Показано ${count} формата`;
   });
 });
-document.querySelector('#year').textContent = new Date().getFullYear();
 
-// Владелец подтвердил: метка 1 на иллюстрации — корпус 1, метка 2 — корпус 2.
-// В корпусе 1 — десять секций; оригинальные SVG предоставлены владельцем.
 const buildings = {
   "1": {
     "address": "г. Тюмень, ул. Республики, 205, корпус 1",
@@ -177,6 +64,70 @@ const buildings = {
     "geoUri": "ymapsbm1://geo?data=Cgo2OTgxNTAwNDIwEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoyIgoNjDKDQhUNg2RC"
   }
 };
+let selectedBuilding = '1';
+let chosenSection = null;
+const areaSelect = document.querySelector('#inquiry-area');
+const itemsInput = document.querySelector('#inquiry-items');
+const inquiryResult = document.querySelector('#inquiry-result');
+const inquiryMessage = document.querySelector('#inquiry-message');
+const copyStatus = document.querySelector('#copy-status');
+const areaNames = {
+  help: 'Помогите подобрать подходящую площадь',
+  compact: 'Компактная · 2–4 м²',
+  universal: 'Универсальная · 4–5 м²',
+  spacious: 'Просторная · 5–7 м²'
+};
+function invalidateInquiry() { inquiryResult.hidden = true; copyStatus.textContent = ''; }
+function updateInquiryContext() {
+  const address = buildings[selectedBuilding].address;
+  document.querySelector('#inquiry-context').textContent = address + (selectedBuilding === '1' && chosenSection ? ` · Секция ${chosenSection}` : '');
+  invalidateInquiry();
+}
+areaSelect.addEventListener('change', invalidateInquiry);
+itemsInput.addEventListener('input', invalidateInquiry);
+function composeInquiry() {
+  const lines = ['Здравствуйте! Интересует аренда индивидуальной кладовой СКЛАДЭКС.', `Адрес: ${buildings[selectedBuilding].address}.`];
+  if (selectedBuilding === '1' && chosenSection) lines.push(`Секция: ${chosenSection}.`);
+  lines.push(`Площадь: ${areaNames[areaSelect.value] || areaNames.help}.`);
+  const items = itemsInput.value.trim();
+  if (items) lines.push(`Планирую хранить: ${items}`);
+  lines.push('Подскажите свободные варианты, точную площадь, актуальную стоимость и когда можно посмотреть помещение.');
+  return lines.join('\n');
+}
+document.querySelector('#inquiry-form').addEventListener('submit', event => event.preventDefault());
+const copyButton = document.querySelector('#copy-inquiry');
+copyButton.disabled = false;
+copyButton.addEventListener('click', async event => {
+  event.preventDefault();
+  const text = composeInquiry();
+  inquiryMessage.value = text;
+  inquiryResult.hidden = false;
+  let copied = false;
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    }
+  } catch { /* При запрете буфера оставляем текст для ручного копирования. */ }
+  if (!copied) {
+    inquiryMessage.focus();
+    inquiryMessage.select();
+    try { copied = typeof document.execCommand === 'function' && document.execCommand('copy'); } catch { copied = false; }
+  }
+  copyStatus.textContent = copied
+    ? 'Текст скопирован. Отправьте его владельцу удобным способом. Сайт ничего не отправлял.'
+    : 'Обращение готово. Выделите текст и скопируйте его вручную: Ctrl+C на компьютере или «Копировать» на телефоне. Сайт ничего не отправлял.';
+});
+document.querySelectorAll('[data-inquiry], [data-request]').forEach(button => {
+  button.addEventListener('click', () => {
+    if (button.dataset.building) setBuilding(button.dataset.building);
+    if (button.dataset.section) chosenSection = button.dataset.section;
+    if (button.dataset.area && areaNames[button.dataset.area]) areaSelect.value = button.dataset.area;
+    updateInquiryContext();
+    scrollTo(document.querySelector('#inquiry'));
+    areaSelect.focus({ preventScroll: true });
+  });
+});
 
 const mapFrame = document.querySelector('#location-map');
 const mapStatus = document.querySelector('#map-status');
@@ -214,40 +165,39 @@ mapFrame.addEventListener('error', () => {
   mapStatus.textContent = 'Не удалось загрузить карту. Обновите её или откройте адрес по ссылке.';
 });
 document.querySelector('#map-retry').addEventListener('click', () => loadLocationMap(mappedBuilding || '1', true));
+
+function setBuilding(id) {
+  const building = buildings[id];
+  if (!building) return;
+  if (selectedBuilding !== id) chosenSection = null;
+  selectedBuilding = id;
+  document.querySelectorAll('[data-building-choice]').forEach(button => {
+    const active = button.dataset.buildingChoice === id;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  document.querySelector('#building-heading').textContent = building.heading;
+  document.querySelector('#building-address').textContent = building.address;
+  document.querySelector('#building-request').dataset.building = id;
+  const panel = document.querySelector('#floorplan-panel');
+  if (panel) panel.hidden = id !== '1';
+  loadLocationMap(id);
+  updateInquiryContext();
+}
 document.querySelectorAll('[data-building-choice]').forEach(button => {
   if (button.hasAttribute('data-photo-choice')) {
     button.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        button.dispatchEvent(new Event('click', { bubbles: true }));
-      }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); button.dispatchEvent(new Event('click', { bubbles: true })); }
     });
   }
   button.addEventListener('click', () => {
-    const id = button.dataset.buildingChoice;
-    const building = buildings[id];
-    if (!building) return;
-    document.querySelectorAll('[data-building-choice]').forEach(choice => {
-      const active = choice.dataset.buildingChoice === id;
-      choice.classList.toggle('active', active);
-      choice.setAttribute('aria-pressed', String(active));
-    });
-    document.querySelector('#building-heading').textContent = building.heading;
-    document.querySelector('#building-address').textContent = building.address;
-    loadLocationMap(id);
-    document.querySelector('#building-request').dataset.building = id;
-    document.querySelector('#floorplan-panel').hidden = id !== '1';
-    if (button.hasAttribute('data-photo-choice')) {
-      document.querySelector('.location-grid').scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-        block: 'start'
-      });
-    }
+    setBuilding(button.dataset.buildingChoice);
+    if (button.hasAttribute('data-photo-choice')) scrollTo(document.querySelector('.location-grid'));
   });
 });
+document.querySelectorAll('a[href="#floorplan-panel"]').forEach(link => link.addEventListener('click', () => setBuilding('1')));
 
-loadLocationMap('1');
-
+if (document.querySelector('#floorplan-panel')) {
 // Файлы отображаются как изображения; исходные номера и векторные линии не меняются.
 const sectionPlans = {
   '1': { width: 3410, height: 3458 },
@@ -267,6 +217,8 @@ function selectSection(id) {
   const plan = sectionPlans[id];
   if (!plan) return;
   activeSection = id;
+  chosenSection = id;
+  updateInquiryContext();
   document.querySelectorAll('[data-section-choice]').forEach(button => {
     const active = button.dataset.sectionChoice === id;
     button.classList.toggle('active', active);
@@ -340,3 +292,8 @@ document.querySelector('#floorplan-preview').addEventListener('error', () => {
 document.querySelector('#floorplan-preview').addEventListener('load', () => {
   document.querySelector('#floorplan-error').hidden = true;
 });
+
+}
+setBuilding('1');
+showSlide(0);
+document.querySelector('#year').textContent = new Date().getFullYear();
