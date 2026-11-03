@@ -7,7 +7,7 @@
   <meta name="description" content="СКЛАДЭКС — индивидуальные кладовые в Тюмени рядом с домом. Подбор площади, схемы секций и осмотр до аренды. Цена и наличие — по запросу.">
   <title>СКЛАДЭКС — пространство для вещей в Тюмени</title>
   <link rel="icon" href="favicon.svg?v=skladex-20261104" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=skladex-20261104">
+  <link rel="stylesheet" href="styles.css?v=skladex-plan-20261104">
   <script src="script.js?v=skladex-20261104" defer></script>
 </head>
 <body id="top">
@@ -45,16 +45,10 @@
         </div>
       </div>
       <!-- Метки и границы домов подтверждены владельцем. -->
-      <figure class="building-photo" id="building-photo">
-        <div class="photo-heading"><h3>Найдите свой дом</h3><p>Дома с кладовыми выделены оранжевым. Выберите корпус на иллюстрации или кнопкой ниже — адрес и карта переключатся вместе.</p><div class="photo-address-list"><button class="photo-address active" data-building-choice="1" aria-pressed="true" aria-controls="location-map building-address"><span>1</span><strong>Республики, 205, корпус 1<small>10 секций со схемами кладовых</small></strong></button><button class="photo-address" data-building-choice="2" aria-pressed="false" aria-controls="location-map building-address"><span>2</span><strong>Республики, 205, корпус 2<small>Осмотр по договорённости</small></strong></button></div><a class="text-button" href="buildings-highlighted.jpg" target="_blank" rel="noopener noreferrer">Открыть картинку крупнее ↗</a></div>
-        <div class="building-photo-stage" id="building-photo-stage">
-          <img src="buildings-highlighted.jpg" alt="Дом с меткой 1 — Тюмень, Республики, 205, корпус 1. Дом с меткой 2 — Республики, 205, корпус 2, включая заднюю высотную секцию." width="1056" height="1489" loading="lazy" decoding="async">
-          <svg class="building-hotspots" viewBox="0 0 1056 1489" aria-label="Выберите корпус на иллюстрации">
-            <g class="building-hotspot active" role="button" tabindex="0" data-building-choice="1" data-photo-choice aria-pressed="true" aria-label="Дом 1: Республики, 205, корпус 1" aria-controls="location-map building-address"><title>Республики, 205, корпус 1</title><path d="M65 774 305 612 300 527 355 482 435 518 451 609 630 706 635 781 580 812 434 765 424 870 450 978 350 1038 66 872Z"/><circle cx="160" cy="592" r="55"/></g>
-            <g class="building-hotspot" role="button" tabindex="0" data-building-choice="2" data-photo-choice aria-pressed="false" aria-label="Дом 2: Республики, 205, корпус 2" aria-controls="location-map building-address"><title>Республики, 205, корпус 2</title><path d="M571 289 624 285 707 330 714 420 850 470 896 496 910 561 725 720 447 568 439 475 495 422 572 459Z"/><circle cx="580" cy="392" r="55"/></g>
-          </svg>
-        </div>
-        <figcaption>Метка 1 — корпус 1. Метка 2 — корпус 2, включая заднюю высотную секцию.</figcaption>
+      <figure class="building-photo building-photo-wide" id="building-photo">
+        <div class="photo-heading"><h3>Найдите свой дом</h3><p>Общая схема квартала «Республики 205». Выберите корпус кнопкой ниже — адрес и карта переключатся вместе.</p><div class="photo-address-list"><button class="photo-address active" data-building-choice="1" aria-pressed="true" aria-controls="location-map building-address"><span>1</span><strong>Республики, 205, корпус 1<small>10 секций со схемами кладовых</small></strong></button><button class="photo-address" data-building-choice="2" aria-pressed="false" aria-controls="location-map building-address"><span>2</span><strong>Республики, 205, корпус 2<small>Осмотр по договорённости</small></strong></button></div><a class="text-button" href="neighborhood-plan.jpg" target="_blank" rel="noopener noreferrer">Открыть схему крупнее ↗</a></div>
+        <div class="building-photo-stage" id="building-photo-stage"><a href="neighborhood-plan.jpg" target="_blank" rel="noopener noreferrer" aria-label="Открыть полную схему квартала Республики 205"><img src="neighborhood-plan.jpg" alt="Общая схема жилого квартала Республики 205 в Тюмени: расположение домов между улицами Республики и Пермякова" width="2880" height="1360" loading="lazy" decoding="async"></a></div>
+        <figcaption>Нажмите на схему, чтобы рассмотреть её крупнее. Схема квартала — <a href="https://tyumen.brusnika.ru/projects/republic/" target="_blank" rel="noopener noreferrer">Брусника</a>.</figcaption>
       </figure>
     </section>
       <section class="floorplan-panel section wrap" id="floorplan-panel" aria-labelledby="plans-title">
