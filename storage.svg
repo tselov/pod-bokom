@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 550" fill="none">
+ <defs>
+  <linearGradient id="wall" x1="156" y1="140" x2="470" y2="400" gradientUnits="userSpaceOnUse"><stop stop-color="#f1ebdb"/><stop offset="1" stop-color="#dcd9c8"/></linearGradient>
+  <linearGradient id="door" x1="400" y1="150" x2="565" y2="380" gradientUnits="userSpaceOnUse"><stop stop-color="#f39857"/><stop offset="1" stop-color="#dd5d36"/></linearGradient>
+  <linearGradient id="floor" x1="240" y1="360" x2="340" y2="490" gradientUnits="userSpaceOnUse"><stop stop-color="#c1c5ac"/><stop offset="1" stop-color="#a6ad92"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10"/></filter>
+ </defs>
+ <ellipse cx="333" cy="457" rx="216" ry="32" fill="#53633b" opacity=".14" filter="url(#shadow)"/>
+ <path d="M132 205 372 127 493 198 254 280Z" fill="#aeb598"/>
+ <path d="m141 205 232-74 1 226-232 78Z" fill="url(#wall)"/>
+ <path d="m373 131 110 65v229l-109-68Z" fill="#c9cbb7"/>
+ <path d="m141 435 233-78 109 68-230 78Z" fill="url(#floor)"/>
+ <path d="m165 434 212-69m-176 81 211-69m-174 82 211-70m-175 82 211-69" stroke="#969e83" stroke-width="1" opacity=".5"/>
+ <path d="m132 205 10 4v226l-10-5Z" fill="#879371"/><path d="m132 205 240-78 121 71-10 7-110-65-231 75Z" fill="#c4c9af"/>
+ <path d="m132 430 121 73v11l-121-73Z" fill="#8f997c"/><path d="m253 503 240-80v11l-240 80Z" fill="#78876a"/>
+ <!-- Shelves and cardboard boxes -->
+ <path d="m170 253 145-47v15l-145 47Z" fill="#a2ab8e"/><path d="m170 268 145-47 20 13-145 48Z" fill="#788967"/>
+ <path d="m170 329 145-47v15l-145 47Z" fill="#a2ab8e"/><path d="m170 344 145-47 20 13-145 48Z" fill="#788967"/>
+ <path d="m179 224 6-2v194l-6 2Zm127-41 6-2v193l-6 2Z" fill="#667956"/>
+ <path d="m186 221 43-14 1 46-44 14Z" fill="#c79963"/><path d="m186 221 43-14 19 10-43 15Z" fill="#e2bd88"/><path d="m229 207 19 10v45l-18-9Z" fill="#b28350"/><path d="m207 214 8-3 19 10-8 3Z" fill="#efdab8"/><path d="m207 232 8-3v33l-8 2Z" fill="#e3c79b"/>
+ <path d="m258 198 38-12 1 46-39 13Z" fill="#cea575"/><path d="m258 198 38-12 16 9-38 13Z" fill="#e7c797"/><path d="m296 186 16 9v46l-15-9Z" fill="#b78b58"/><path d="m275 193 7-2 16 9-7 2Z" fill="#f1dabb"/><path d="m275 208 7-2v31l-7 3Z" fill="#ecd3ad"/>
+ <path d="m195 288 57-18v45l-57 19Z" fill="#dfb47c"/><path d="m195 288 57-18 20 12-57 18Z" fill="#efd1a0"/><path d="m252 270 20 12v45l-20-12Z" fill="#bf925d"/><path d="m219 281 9-3 20 12-9 3Z" fill="#f6e4c7"/><path d="m219 300 9-3v26l-9 3Z" fill="#f6e4c7"/>
+ <path d="m269 270 32-10v39l-32 10Z" fill="#8e9e78"/><path d="m269 270 32-10 13 8-32 10Z" fill="#b3bea2"/><path d="m301 260 13 8v39l-13-8Z" fill="#758b5e"/><path d="m280 288 12-4v5l-12 4Z" fill="#eee9d5"/>
+ <!-- Tall snowboard -->
+ <path d="M345 200c2-11 11-16 18-9 4 4 5 9 4 17l-17 170c-1 13-20 18-20 3Z" fill="#ed7248" stroke="#c75132" stroke-width="2"/>
+ <path d="m341 251 19 6m-24 41 19 6" stroke="#384c39" stroke-width="10"/>
+ <path d="m341 249 14 3-1 11-14-4Zm-5 47 14 3-1 11-14-4Z" stroke="#23382b" stroke-width="3"/>
+ <path d="m346 219 13-4" stroke="#f5d78c" stroke-width="4"/>
+ <!-- Bicycle -->
+ <ellipse cx="209" cy="400" rx="35" ry="43" transform="rotate(-9 209 400)" stroke="#3c4939" stroke-width="9"/>
+ <ellipse cx="307" cy="370" rx="35" ry="43" transform="rotate(-9 307 370)" stroke="#3c4939" stroke-width="9"/>
+ <path d="m209 400 33-70 32 49-65 21 21-49 77 19-30-65" stroke="#dd7547" stroke-width="6" stroke-linejoin="round"/>
+ <path d="m209 400 98-30m-92-12-11 84m71-66 63-13m-35-36 10 87" stroke="#637258" stroke-width="1.5"/>
+ <path d="m240 331-3-14m-13 3 25-8m28-7-8-15 19-6" stroke="#374d3b" stroke-width="6" stroke-linecap="round"/>
+ <ellipse cx="274" cy="379" rx="8" ry="9" fill="#3c4939"/><path d="m274 379 12 8 10-3" stroke="#3c4939" stroke-width="4" stroke-linecap="round"/>
+ <!-- Tires -->
+ <path d="m376 384 7 38c2 14 68 10 70-7l-5-39Z" fill="#303b30"/><ellipse cx="412" cy="380" rx="36" ry="15" fill="#53604c"/><ellipse cx="412" cy="380" rx="19" ry="7" fill="#a8b098"/><path d="M382 396c15 12 53 6 68-5m-66 17c14 12 53 6 67-5" stroke="#1f2d23" stroke-width="3"/>
+ <!-- Open orange locker door -->
+ <path d="m482 199 101 48v227l-101-49Z" fill="#c35131"/><path d="m488 204 89 45v217l-89-44Z" fill="url(#door)"/>
+ <path d="m498 219 68 34v192l-68-34Z" stroke="#cb5937" stroke-width="2"/>
+ <path d="m508 241 46 23m-46-16 46 23m-46-15 46 23" stroke="#b94e30" stroke-width="3"/>
+ <path d="m554 343 4 2v30l-4-2Z" fill="#8c5436"/><path d="m559 348 6 3v20l-6-3Z" fill="#f3d19b"/>
+ <path d="m484 247 7 3v16l-7-3Zm0 137 7 3v16l-7-3Z" fill="#85916f"/>
+ <!-- Door number -->
+ <path d="m516 290 28 14v22l-28-14Z" fill="#fae7c2"/><text x="524" y="308" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="#97613c" transform="rotate(26 524 308)">01</text>
+ <!-- Small foreground box -->
+ <path d="m110 394 43-14 35 20-43 15Z" fill="#e1bc86"/><path d="m110 394 35 21v43l-35-22Z" fill="#c8955d"/><path d="m145 415 43-15v43l-43 15Z" fill="#d6a96e"/><path d="m128 388 8-3 35 21-8 3Z" fill="#f0dbb4"/><path d="m163 409 8-3v43l-8 3Z" fill="#edcf9c"/>
+ <path d="m119 422 16 9v9l-16-9Z" fill="#f2e5ca"/>
+</svg>
