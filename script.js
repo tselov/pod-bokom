@@ -162,9 +162,58 @@ document.querySelector('#year').textContent = new Date().getFullYear();
 // Владелец подтвердил: метка 1 на иллюстрации — корпус 1, метка 2 — корпус 2.
 // В корпусе 1 — десять секций; оригинальные SVG предоставлены владельцем.
 const buildings = {
-  '1': { address: 'г. Тюмень, ул. Республики, 205, корпус 1', heading: 'Республики, 205 · корпус 1' },
-  '2': { address: 'г. Тюмень, ул. Республики, 205, корпус 2', heading: 'Республики, 205 · корпус 2' }
+  "1": {
+    "address": "г. Тюмень, ул. Республики, 205, корпус 1",
+    "heading": "Республики, 205 · корпус 1",
+    "longitude": 65.59686,
+    "latitude": 57.12774,
+    "geoUri": "ymapsbm1://geo?data=Cgo2NTkwNjYyMjQyEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoxIgoNlzGDQhXOgmRC"
+  },
+  "2": {
+    "address": "г. Тюмень, ул. Республики, 205, корпус 2",
+    "heading": "Республики, 205 · корпус 2",
+    "longitude": 65.598728,
+    "latitude": 57.12798,
+    "geoUri": "ymapsbm1://geo?data=Cgo2OTgxNTAwNDIwEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoyIgoNjDKDQhUNg2RC"
+  }
 };
+
+const mapFrame = document.querySelector('#location-map');
+const mapStatus = document.querySelector('#map-status');
+let mappedBuilding = null;
+let mapLoadingTimer = null;
+function loadLocationMap(id, force = false) {
+  const building = buildings[id];
+  if (!building) return;
+  const center = `${building.longitude},${building.latitude}`;
+  const query = new URLSearchParams({mode: 'search', ol: 'geo', ouri: building.geoUri, ll: center, z: '17'});
+  document.querySelector('#map-external').href = `https://yandex.ru/maps/?${query}`;
+  document.querySelector('#map-route').href = `https://yandex.ru/maps/?rtext=~${building.latitude},${building.longitude}&rtt=auto`;
+  document.querySelector('#map-backup').href = `https://2gis.ru/tyumen/search/${encodeURIComponent(building.address)}`;
+  if (mappedBuilding === id && !force) return;
+  mappedBuilding = id;
+  clearTimeout(mapLoadingTimer);
+  mapStatus.hidden = false;
+  mapStatus.textContent = `Загружаем карту корпуса ${id}…`;
+  mapFrame.title = `Карта: ${building.address}`;
+  mapFrame.src = `https://yandex.ru/map-widget/v1/?${query}`;
+  // У iframe другой домен: событие load подтверждает загрузку документа, но не карты внутри него.
+  // Ссылки на адрес и маршрут доступны независимо от загрузки внешнего виджета.
+  mapLoadingTimer = setTimeout(() => {
+    mapStatus.hidden = false;
+    mapStatus.textContent = 'Карта загружается дольше обычного. Можно открыть адрес в Яндекс Картах или 2ГИС.';
+  }, 12000);
+}
+mapFrame.addEventListener('load', () => {
+  clearTimeout(mapLoadingTimer);
+  mapStatus.hidden = true;
+});
+mapFrame.addEventListener('error', () => {
+  clearTimeout(mapLoadingTimer);
+  mapStatus.hidden = false;
+  mapStatus.textContent = 'Не удалось загрузить карту. Обновите её или откройте адрес по ссылке.';
+});
+document.querySelector('#map-retry').addEventListener('click', () => loadLocationMap(mappedBuilding || '1', true));
 document.querySelectorAll('[data-building-choice]').forEach(button => {
   if (button.hasAttribute('data-photo-choice')) {
     button.addEventListener('keydown', event => {
@@ -185,11 +234,7 @@ document.querySelectorAll('[data-building-choice]').forEach(button => {
     });
     document.querySelector('#building-heading').textContent = building.heading;
     document.querySelector('#building-address').textContent = building.address;
-    const query = encodeURIComponent(building.address);
-    const map = document.querySelector('#location-map');
-    map.title = `Карта: ${building.address}`;
-    map.src = `https://yandex.ru/map-widget/v1/?mode=search&text=${query}&z=17`;
-    document.querySelector('#map-external').href = `https://yandex.ru/maps/?text=${query}`;
+    loadLocationMap(id);
     document.querySelector('#building-request').dataset.building = id;
     document.querySelector('#floorplan-panel').hidden = id !== '1';
     if (button.hasAttribute('data-photo-choice')) {
@@ -200,6 +245,8 @@ document.querySelectorAll('[data-building-choice]').forEach(button => {
     }
   });
 });
+
+loadLocationMap('1');
 
 // Файлы отображаются как изображения; исходные номера и векторные линии не меняются.
 const sectionPlans = {
@@ -230,6 +277,7 @@ function selectSection(id) {
   preview.width = plan.width;
   preview.height = plan.height;
   preview.alt = `Схема расположения кладовых в секции ${id}, Республики, 205, корпус 1`;
+  document.querySelector('#floorplan-error').hidden = true;
   preview.src = sectionSource(id);
   document.querySelector('#floorplan-file').href = sectionSource(id);
   document.querySelector('#floorplan-caption').textContent = `Схема секции ${id} предоставлена владельцем. Номера и расположение сохранены. Выбор секции не создаёт бронь.`;
@@ -283,4 +331,12 @@ document.querySelector('#plan-fit').addEventListener('click', () => setPlanZoom(
 planDialog.querySelector('.dialog-close').addEventListener('click', () => planDialog.close());
 planDialog.addEventListener('close', () => {
   if (planTrigger) planTrigger.focus();
+});
+
+// При сетевой ошибке оставляем пользователю ссылку на оригинальную схему.
+document.querySelector('#floorplan-preview').addEventListener('error', () => {
+  document.querySelector('#floorplan-error').hidden = false;
+});
+document.querySelector('#floorplan-preview').addEventListener('load', () => {
+  document.querySelector('#floorplan-error').hidden = true;
 });
