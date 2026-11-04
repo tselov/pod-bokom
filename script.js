@@ -1,5 +1,27 @@
 "use strict";
 
+const core = window.SkladexCatalog;
+const config = window.SKLADEX_CONFIG || {};
+const metricId = Number(config.metricaCounterId);
+const metricActive = config.metricaEnabled === true && Number.isInteger(metricId) && metricId > 0;
+if (metricActive) {
+  window.ym = window.ym || function () { (window.ym.a = window.ym.a || []).push(arguments); };
+  window.ym.l = Date.now();
+  const metricScript = document.createElement('script');
+  metricScript.async = true;
+  metricScript.src = 'https://mc.yandex.ru/metrika/tag.js';
+  document.head.append(metricScript);
+  window.ym(metricId, 'init', { clickmap: false, trackLinks: false, accurateTrackBounce: true, webvisor: false });
+}
+function trackEvent(name, values = {}) {
+  // Только свойства каталога. Телефоны клиентов, сообщения и иные ПД сюда не передаются.
+  const safe = {};
+  for (const key of ['unitId', 'building', 'category', 'section']) {
+    if (values[key] !== undefined) safe[key] = String(values[key]);
+  }
+  document.dispatchEvent(new CustomEvent('skladex:analytics', { detail: { name, params: safe } }));
+  if (metricActive && typeof window.ym === 'function') window.ym(metricId, 'reachGoal', name, safe);
+}
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const scrollTo = element => element.scrollIntoView({ behavior: reducedMotion() ? 'instant' : 'smooth', block: 'start' });
 const menuToggle = document.querySelector('.menu-toggle');
@@ -21,33 +43,6 @@ document.addEventListener('keydown', event => {
 });
 window.matchMedia('(min-width: 761px)').addEventListener('change', event => { if (event.matches) closeMenu(); });
 
-const slides = [...document.querySelectorAll('[data-slide]')];
-let activeSlide = 0;
-function showSlide(index) {
-  activeSlide = (index + slides.length) % slides.length;
-  slides.forEach((slide, i) => { slide.hidden = i !== activeSlide; });
-  document.querySelector('#hero-count').textContent = `${String(activeSlide + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
-}
-document.querySelector('#slide-prev').addEventListener('click', () => showSlide(activeSlide - 1));
-document.querySelector('#slide-next').addEventListener('click', () => showSlide(activeSlide + 1));
-
-const areaCards = [...document.querySelectorAll('.area-card')];
-document.querySelectorAll('[data-filter]').forEach(button => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('[data-filter]').forEach(filter => {
-      const active = filter === button;
-      filter.classList.toggle('active', active);
-      filter.setAttribute('aria-pressed', String(active));
-    });
-    let count = 0;
-    areaCards.forEach(card => {
-      card.hidden = button.dataset.filter !== 'all' && card.dataset.format !== button.dataset.filter;
-      if (!card.hidden) count++;
-    });
-    document.querySelector('#format-count').textContent = count === 1 ? 'Показан 1 формат' : `Показано ${count} формата`;
-  });
-});
-
 const buildings = {
   "1": {
     "address": "г. Тюмень, ул. Республики, 205, корпус 1",
@@ -64,70 +59,219 @@ const buildings = {
     "geoUri": "ymapsbm1://geo?data=Cgo2OTgxNTAwNDIwEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoyIgoNjDKDQhUNg2RC"
   }
 };
+
 let selectedBuilding = '1';
 let chosenSection = null;
-const areaSelect = document.querySelector('#inquiry-area');
-const itemsInput = document.querySelector('#inquiry-items');
-const inquiryResult = document.querySelector('#inquiry-result');
-const inquiryMessage = document.querySelector('#inquiry-message');
-const copyStatus = document.querySelector('#copy-status');
-const areaNames = {
-  help: 'Помогите подобрать подходящую площадь',
-  compact: 'Компактная · 2–4 м²',
-  universal: 'Универсальная · 4–5 м²',
-  spacious: 'Просторная · 5–7 м²'
-};
-function invalidateInquiry() { inquiryResult.hidden = true; copyStatus.textContent = ''; }
-function updateInquiryContext() {
-  const address = buildings[selectedBuilding].address;
-  document.querySelector('#inquiry-context').textContent = address + (selectedBuilding === '1' && chosenSection ? ` · Секция ${chosenSection}` : '');
-  invalidateInquiry();
+let selectPlanSection = null;
+let catalogData = null;
+const filters = { building: 'all', category: 'all', section: 'all', availability: 'available' };
+const grid = document.querySelector('#units-grid');
+const dialog = document.querySelector('#contact-dialog');
+const messageField = document.querySelector('#contact-message');
+const dialogTelegram = document.querySelector('#unit-telegram');
+let contactTrigger = null;
+const viewedUnits = new Set();
+const unitObserver = 'IntersectionObserver' in window ? new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    const unit = catalogData?.units.find(item => item.id === entry.target.dataset.unitId);
+    if (unit && unit.status === 'available' && !viewedUnits.has(unit.id)) {
+      viewedUnits.add(unit.id);
+      trackEvent('unit_view', { unitId: unit.id, building: unit.building, category: unit.category });
+    }
+    unitObserver.unobserve(entry.target);
+  });
+}, { threshold: 0.35 }) : null;
+
+function buildingAvailability(id) {
+  if (!catalogData) return 'Наличие — в каталоге кладовых';
+  const units = catalogData.units.filter(unit => String(unit.building) === id && unit.addressId === 'republic-205');
+  const free = units.filter(unit => unit.status === 'available').length;
+  return free ? `Свободно: ${free} из ${units.length}` : `Все ${units.length} кладовых заняты`;
 }
-areaSelect.addEventListener('change', invalidateInquiry);
-itemsInput.addEventListener('input', invalidateInquiry);
-function composeInquiry() {
-  const lines = ['Здравствуйте! Интересует аренда индивидуальной кладовой СКЛАДЭКС.', `Адрес: ${buildings[selectedBuilding].address}.`];
-  if (selectedBuilding === '1' && chosenSection) lines.push(`Секция: ${chosenSection}.`);
-  lines.push(`Площадь: ${areaNames[areaSelect.value] || areaNames.help}.`);
-  const items = itemsInput.value.trim();
-  if (items) lines.push(`Планирую хранить: ${items}`);
-  lines.push('Подскажите свободные варианты, точную площадь, актуальную стоимость и когда можно посмотреть помещение.');
-  return lines.join('\n');
+function showContact(message, title, details, trigger, unitId = '') {
+  contactTrigger = trigger;
+  document.querySelector('#contact-dialog-title').textContent = title;
+  document.querySelector('#contact-dialog-details').textContent = details;
+  document.querySelector('#contact-copy-status').textContent = '';
+  messageField.value = message;
+  dialogTelegram.href = core.telegramLink(message);
+  dialogTelegram.dataset.unitId = unitId;
+  dialog.showModal();
 }
-document.querySelector('#inquiry-form').addEventListener('submit', event => event.preventDefault());
-const copyButton = document.querySelector('#copy-inquiry');
-copyButton.disabled = false;
-copyButton.addEventListener('click', async event => {
-  event.preventDefault();
-  const text = composeInquiry();
-  inquiryMessage.value = text;
-  inquiryResult.hidden = false;
+function requestUnit(id, trigger) {
+  const unit = catalogData?.units.find(item => item.id === id);
+  if (!unit || unit.status !== 'available') return;
+  const address = catalogData.addresses[unit.addressId];
+  const message = core.composeMessage(unit, catalogData);
+  trackEvent('inspection_click', { unitId: unit.id, building: unit.building, category: unit.category, section: unit.section });
+  showContact(message, `Кладовая №${unit.number}`, `${address.city}, ${address.street}, ${address.house} · Корпус ${unit.building} · Секция ${unit.section} · ${core.formatArea(unit.area)} м²`, trigger, unit.id);
+}
+dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+dialog.addEventListener('close', () => { if (contactTrigger?.isConnected) contactTrigger.focus(); });
+document.querySelector('#copy-message').addEventListener('click', async () => {
   let copied = false;
   try {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      await navigator.clipboard.writeText(text);
-      copied = true;
-    }
-  } catch { /* При запрете буфера оставляем текст для ручного копирования. */ }
+    if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(messageField.value); copied = true; }
+  } catch { /* Ниже остаётся ручное копирование. */ }
   if (!copied) {
-    inquiryMessage.focus();
-    inquiryMessage.select();
-    try { copied = typeof document.execCommand === 'function' && document.execCommand('copy'); } catch { copied = false; }
+    messageField.focus();
+    messageField.select();
+    try { copied = !!document.execCommand?.('copy'); } catch { copied = false; }
   }
-  copyStatus.textContent = copied
-    ? 'Текст скопирован. Отправьте его владельцу удобным способом. Сайт ничего не отправлял.'
-    : 'Обращение готово. Выделите текст и скопируйте его вручную: Ctrl+C на компьютере или «Копировать» на телефоне. Сайт ничего не отправлял.';
+  document.querySelector('#contact-copy-status').textContent = copied
+    ? 'Текст скопирован. Вставьте его в чат @Skladex и отправьте.'
+    : 'Выделите текст и скопируйте его вручную, затем отправьте в Telegram @Skladex.';
 });
-document.querySelectorAll('[data-inquiry], [data-request]').forEach(button => {
+document.querySelectorAll('[data-request]').forEach(button => {
   button.addEventListener('click', () => {
-    if (button.dataset.building) setBuilding(button.dataset.building);
-    if (button.dataset.section) chosenSection = button.dataset.section;
-    if (button.dataset.area && areaNames[button.dataset.area]) areaSelect.value = button.dataset.area;
-    updateInquiryContext();
-    scrollTo(document.querySelector('#inquiry'));
-    areaSelect.focus({ preventScroll: true });
+    const building = button.dataset.building || selectedBuilding;
+    const section = button.dataset.section;
+    const detail = buildings[building].address + (section ? ` · Секция ${section}` : '');
+    showContact(`Здравствуйте! Интересует аренда кладовой: ${buildings[building].address}${section ? `, секция ${section}` : ''}. Подскажите доступные варианты и помогите договориться об осмотре.`, 'Подберём кладовую', detail, button);
   });
 });
+document.addEventListener('click', event => {
+  const link = event.target.closest('a');
+  if (!link) return;
+  if (link.hasAttribute('data-phone')) trackEvent('phone_click');
+  if (link.hasAttribute('data-telegram') || link.id === 'unit-telegram') {
+    trackEvent('telegram_click', link.dataset.unitId ? { unitId: link.dataset.unitId } : {});
+  }
+});
+
+function safeImagePath(path) {
+  if (typeof path !== 'string') return null;
+  // Фотографии храним в репозитории: URL, скрипты и выход за корень не разрешены.
+  return /^(?:images|photos)\/[a-zA-Z0-9_./-]+\.(?:png|jpe?g|webp|avif)$/i.test(path) && !path.includes('..') ? path : null;
+}
+function makeUnitCard(unit) {
+  const free = unit.status === 'available';
+  const card = document.createElement('article');
+  card.className = `unit-card${free ? '' : ' unit-occupied'}`;
+  card.dataset.unitId = unit.id;
+  card.setAttribute('aria-labelledby', `title-${unit.id}`);
+  card.innerHTML = `<div class="unit-media"><span class="unit-pictogram" aria-hidden="true"><svg viewBox="0 0 160 120" fill="none"><rect x="25" y="39" width="76" height="58" rx="7" fill="#D7E1EC" stroke="#071E3A" stroke-width="2"/><path d="M47 39v-9h32v9M43 50v35M84 50v35" stroke="#071E3A" stroke-width="3"/><path d="m95 61 32-11 24 14v32l-32 11-24-14V61Z" fill="#FFD5BC" stroke="#071E3A" stroke-width="2"/><path d="m95 61 24 14 32-11M119 75v32M107 57l25 14" stroke="#071E3A" stroke-width="2"/></svg></span><span class="illustration-label">Иллюстрация</span><span class="unit-status"></span></div><div class="unit-copy"><p class="unit-category"></p><h3></h3><p class="unit-address"></p><p class="unit-position"></p><dl class="unit-specs"><div><dt>Площадь</dt><dd></dd></div></dl><div class="unit-price"></div><button class="button unit-inspect" type="button"></button><a class="unit-chat text-link" target="_blank" rel="noopener noreferrer">Написать об этой кладовой ↗</a><div class="unit-plan"></div></div>`;
+  const q = selector => card.querySelector(selector);
+  const address = catalogData.addresses[unit.addressId];
+  const heading = q('h3');
+  heading.id = `title-${unit.id}`;
+  heading.textContent = `Кладовая №${unit.number}`;
+  q('.unit-status').textContent = free ? 'Свободна' : 'Занята';
+  q('.unit-status').classList.toggle('available', free);
+  q('.unit-category').textContent = catalogData.categories[unit.category].name;
+  q('.unit-address').textContent = `${address.city}, ${address.street}, ${address.house}`;
+  q('.unit-position').textContent = `Корпус ${unit.building} · Секция ${unit.section}`;
+  q('dd').textContent = `${core.formatArea(unit.area)} м²`;
+  const price = core.offerPrice(unit, catalogData.categories);
+  q('.unit-price').textContent = free ? `${catalogData.categories[unit.category].priceFrom ? 'от ' : ''}${core.formatPrice(price)} ₽/мес.` : 'Помещение занято';
+  const button = q('.unit-inspect');
+  button.textContent = 'Записаться на осмотр';
+  button.setAttribute('aria-label', `Записаться на осмотр кладовой №${unit.number}, корпус ${unit.building}`);
+  button.disabled = !free;
+  button.classList.add(free ? 'button-primary' : 'button-outline');
+  button.addEventListener('click', () => requestUnit(unit.id, button));
+  const link = q('.unit-chat');
+  link.hidden = !free;
+  if (free) { link.href = core.telegramLink(core.composeMessage(unit, catalogData)); link.dataset.telegram = ''; link.dataset.unitId = unit.id; }
+  const plan = q('.unit-plan');
+  if (unit.building === 1 && unit.addressId === 'republic-205' && unit.plan) {
+    const planButton = document.createElement('button');
+    planButton.type = 'button';
+    planButton.className = 'text-link';
+    planButton.textContent = `Схема секции ${unit.section} ↗`;
+    planButton.addEventListener('click', () => {
+      setBuilding('1');
+      if (selectPlanSection) selectPlanSection(String(unit.section));
+      scrollTo(document.querySelector('#floorplan-panel'));
+    });
+    plan.append(planButton);
+  } else {
+    plan.textContent = unit.plan ? 'Схема уточняется у владельца' : 'Схема пока не опубликована';
+  }
+  const photo = safeImagePath(unit.photo);
+  if (photo) {
+    const image = document.createElement('img');
+    image.src = photo; image.alt = `Кладовая №${unit.number}, корпус ${unit.building}`; image.loading = 'lazy'; image.width = 640; image.height = 400;
+    const icon = q('.unit-pictogram');
+    icon.hidden = true;
+    q('.unit-media .illustration-label').hidden = true;
+    q('.unit-media').prepend(image);
+    image.addEventListener('error', () => { image.remove(); icon.hidden = false; q('.unit-media .illustration-label').hidden = false; });
+  }
+  return card;
+}
+function renderCatalog() {
+  if (!catalogData) return;
+  unitObserver?.disconnect();
+  const matches = core.filterUnits(catalogData.units, filters);
+  grid.replaceChildren(...matches.map(makeUnitCard));
+  grid.setAttribute('aria-busy', 'false');
+  document.querySelector('#catalog-count').textContent = `Найдено: ${matches.length} из ${catalogData.units.length}`;
+  document.querySelector('#catalog-empty').hidden = matches.length !== 0;
+  document.querySelector('#show-all-units').checked = filters.availability === 'all';
+  document.querySelector('#catalog-title').innerHTML = filters.availability === 'available'
+    ? 'Свободные кладовые<br>на Республики, 205'
+    : 'Кладовые<br>на Республики, 205';
+  if (unitObserver) grid.querySelectorAll('.unit-card:not(.unit-occupied)').forEach(card => unitObserver.observe(card));
+}
+function resetFilters() {
+  Object.assign(filters, { building: 'all', category: 'all', section: 'all', availability: 'available' });
+  for (const [key, value] of Object.entries(filters)) document.querySelector(`#filter-${key}`).value = value;
+  renderCatalog();
+}
+for (const name of Object.keys(filters)) {
+  document.querySelector(`#filter-${name}`).addEventListener('change', event => {
+    filters[name] = event.target.value;
+    if (name === 'building') trackEvent('building_select', { building: filters.building });
+    if (name === 'category') trackEvent('category_select', { category: filters.category });
+    renderCatalog();
+  });
+}
+document.querySelector('#show-all-units').addEventListener('change', event => {
+  filters.availability = event.target.checked ? 'all' : 'available';
+  document.querySelector('#filter-availability').value = filters.availability;
+  renderCatalog();
+});
+document.querySelector('#reset-filters').addEventListener('click', resetFilters);
+document.querySelector('#empty-reset').addEventListener('click', resetFilters);
+document.querySelectorAll('[data-category-choice]').forEach(link => link.addEventListener('click', () => {
+  resetFilters();
+  filters.category = link.dataset.categoryChoice;
+  document.querySelector('#filter-category').value = filters.category;
+  trackEvent('category_select', { category: filters.category });
+  renderCatalog();
+}));
+async function loadCatalog() {
+  grid.setAttribute('aria-busy', 'true');
+  document.querySelector('#catalog-error').hidden = true;
+  document.querySelector('#catalog-count').textContent = 'Загружаем кладовые…';
+  try {
+    const response = await fetch('units.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Каталог недоступен');
+    catalogData = core.validateData(await response.json());
+    const sectionSelect = document.querySelector('#filter-section');
+    sectionSelect.replaceChildren(new Option('Все секции', 'all'), ...[...new Set(catalogData.units.map(unit => unit.section))].sort((a,b) => a-b).map(n => new Option(`Секция ${n}`, String(n))));
+    sectionSelect.value = filters.section;
+    const buildingSelect = document.querySelector('#filter-building');
+    buildingSelect.replaceChildren(new Option('Все корпуса', 'all'), ...[...new Set(catalogData.units.map(unit => unit.building))].sort((a,b) => a-b).map(n => new Option(`Корпус ${n}`, String(n))));
+    buildingSelect.value = filters.building;
+    const categorySelect = document.querySelector('#filter-category');
+    categorySelect.replaceChildren(new Option('Все категории', 'all'), ...Object.entries(catalogData.categories).map(([id, category]) => new Option(category.name, id)));
+    categorySelect.value = filters.category;
+    document.querySelector('#catalog-updated').textContent = `Данные на ${new Date(catalogData.updatedAt + 'T12:00:00Z').toLocaleDateString('ru-RU')}`;
+    document.querySelector('#building-availability').textContent = buildingAvailability(selectedBuilding);
+    renderCatalog();
+  } catch {
+    catalogData = null;
+    grid.replaceChildren();
+    grid.setAttribute('aria-busy', 'false');
+    document.querySelector('#catalog-count').textContent = 'Каталог временно недоступен';
+    document.querySelector('#catalog-empty').hidden = true;
+    document.querySelector('#catalog-error').hidden = false;
+  }
+}
+document.querySelector('#catalog-retry').addEventListener('click', loadCatalog);
 
 const mapFrame = document.querySelector('#location-map');
 const mapStatus = document.querySelector('#map-status');
@@ -182,7 +326,9 @@ function setBuilding(id) {
   const panel = document.querySelector('#floorplan-panel');
   if (panel) panel.hidden = id !== '1';
   loadLocationMap(id);
-  updateInquiryContext();
+  document.querySelector('#plans-unavailable').hidden = id !== '2';
+  document.querySelector('#building-availability').textContent = buildingAvailability(id);
+  trackEvent('building_select', { building: id });
 }
 document.querySelectorAll('[data-building-choice]').forEach(button => {
   if (button.hasAttribute('data-photo-choice')) {
@@ -218,7 +364,7 @@ function selectSection(id) {
   if (!plan) return;
   activeSection = id;
   chosenSection = id;
-  updateInquiryContext();
+
   document.querySelectorAll('[data-section-choice]').forEach(button => {
     const active = button.dataset.sectionChoice === id;
     button.classList.toggle('active', active);
@@ -237,6 +383,7 @@ function selectSection(id) {
   document.querySelectorAll('[data-plan-open]').forEach(button => button.setAttribute('aria-label', `Увеличить схему секции ${id}`));
 }
 
+selectPlanSection = selectSection;
 document.querySelectorAll('[data-section-choice]').forEach(button => {
   button.addEventListener('click', () => selectSection(button.dataset.sectionChoice));
 });
@@ -294,6 +441,7 @@ document.querySelector('#floorplan-preview').addEventListener('load', () => {
 });
 
 }
+
 setBuilding('1');
-showSlide(0);
 document.querySelector('#year').textContent = new Date().getFullYear();
+loadCatalog();
