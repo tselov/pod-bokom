@@ -428,6 +428,20 @@
       "updatedAt": "2026-11-04",
       "photo": null,
       "plan": null
+    },
+    {
+      "id": "masharova-10-87",
+      "addressId": "masharova-10",
+      "building": null,
+      "section": null,
+      "number": 87,
+      "area": null,
+      "category": null,
+      "status": "available",
+      "monthlyOfferPrice": null,
+      "updatedAt": "2026-11-04",
+      "photo": null,
+      "plan": null
     }
   ]
 }

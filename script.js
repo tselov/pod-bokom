@@ -132,7 +132,7 @@ function requestUnit(id, trigger) {
   const address = catalogData.addresses[unit.addressId];
   const message = core.composeMessage(unit, catalogData);
   trackEvent(unit.status === 'available' ? 'inspection_click' : 'availability_click', { unitId: unit.id, addressId: unit.addressId, building: unit.building, category: unit.category, section: unit.section });
-  showContact(message, `Кладовая №${unit.number}`, `${address.city}, ${address.street}, ${address.house}${unitPosition(unit) ? ' · ' + unitPosition(unit) : ''} · ${core.formatArea(unit.area)} м²`, trigger, unit.id);
+  showContact(message, `Кладовая №${unit.number}`, `${address.city}, ${address.street}, ${address.house}${unitPosition(unit) ? ' · ' + unitPosition(unit) : ''} · ${unit.area === null ? 'Площадь уточняется' : core.formatArea(unit.area) + ' м²'}`, trigger, unit.id);
   document.querySelector('#contact-dialog-eyebrow').textContent = unit.status === 'available' ? 'ЗАПИСЬ НА ОСМОТР' : 'УТОЧНЕНИЕ НАЛИЧИЯ';
 }
 dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
@@ -189,12 +189,14 @@ function makeUnitCard(unit) {
   heading.textContent = `Кладовая №${unit.number}`;
   q('.unit-status').textContent = free ? 'Свободна' : unknown ? 'Наличие уточняется' : 'Занята';
   q('.unit-status').classList.toggle('available', free);
-  q('.unit-category').textContent = catalogData.categories[unit.category].name;
+  q('.unit-category').textContent = catalogData.categories[unit.category]?.name || 'Размер уточняется';
   q('.unit-address').textContent = `${address.city}, ${address.street}, ${address.house}`;
   q('.unit-position').textContent = unitPosition(unit) || 'Расположение уточните у владельца';
-  q('dd').textContent = `${core.formatArea(unit.area)} м²`;
+  q('dd').textContent = unit.area === null ? 'Уточняется' : `${core.formatArea(unit.area)} м²`;
   const price = core.offerPrice(unit, catalogData.categories);
-  q('.unit-price').textContent = free ? `${catalogData.categories[unit.category].priceFrom ? 'от ' : ''}${core.formatPrice(price)} ₽/мес.` : unknown ? 'Цена и наличие — по запросу' : 'Помещение занято';
+  q('.unit-price').textContent = free
+    ? price === null ? 'Стоимость по запросу' : `${catalogData.categories[unit.category]?.priceFrom ? 'от ' : ''}${core.formatPrice(price)} ₽/мес.`
+    : unknown ? 'Цена и наличие — по запросу' : 'Помещение занято';
   const button = q('.unit-inspect');
   button.textContent = unknown ? 'Уточнить наличие' : 'Записаться на осмотр';
   button.setAttribute('aria-label', `${unknown ? 'Уточнить наличие' : 'Записаться на осмотр'} кладовой №${unit.number}, ${address.street}, ${address.house}${unitPosition(unit) ? ', ' + unitPosition(unit) : ''}`);
