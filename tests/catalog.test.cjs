@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const core = require('../catalog-core.js');
+const plans = require('../plans-data.js');
 const root = path.resolve(__dirname, '..');
 const data = JSON.parse(fs.readFileSync(path.join(root, 'units.json'), 'utf8'));
 const defaults = { building: 'all', category: 'all', section: 'all', availability: 'available' };
@@ -23,8 +24,8 @@ test('Точный состав каталога, площади и тарифы
   for (const unit of data.units) {
     assert.equal(core.offerPrice(unit, data.categories), unit.status === 'available' ? 3000 : null);
     assert.equal(unit.photo, null);
-    if (unit.building === 1) assert.ok(fs.existsSync(path.join(root, unit.plan)));
-    else assert.equal(unit.plan, null);
+    assert.ok(fs.existsSync(path.join(root, unit.plan)));
+    assert.equal(unit.plan, plans[String(unit.building)][String(unit.section)].src);
   }
 });
 test('Фильтры: занятый корпус, секция, пересечения и сброс на все', () => {
@@ -67,4 +68,20 @@ test('Повреждённые данные не публикуются как �
   assert.throws(() => core.validateData(duplicate));
   const wrong = structuredClone(data); wrong.units[0].category = 'spacious';
   assert.throws(() => core.validateData(wrong));
+});
+
+test('Новые схемы двух корпусов изолированы, исходные файлы существуют', () => {
+  assert.deepEqual(Object.keys(plans['1']).map(Number), [1,2,3,4,5,6,7,8,9,10]);
+  assert.deepEqual(Object.keys(plans['2']).map(Number), [1,2,3,4,6,7,8]);
+  assert.equal(plans['2']['5'], undefined);
+  const used = new Set();
+  for (const [building, sections] of Object.entries(plans)) {
+    for (const [section, plan] of Object.entries(sections)) {
+      assert.equal(plan.src, `floorplans/republic_205-${building}-${section}.png`);
+      assert.ok(fs.existsSync(path.join(root, plan.src)));
+      assert.ok(plan.width > 0 && plan.height > 0);
+      assert.ok(!used.has(plan.src)); used.add(plan.src);
+    }
+  }
+  assert.equal(used.size, 17);
 });
