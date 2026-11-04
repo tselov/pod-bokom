@@ -1,4 +1,4 @@
-/* Реестр исходных схем владельца: корпус → секция → файл. */
+/* Реестр исходных схем владельца: дом → секция → файл. */
 (function (root, plans) {
   if (typeof module === "object" && module.exports) module.exports = plans;
   else root.SKLADEX_PLANS = plans;
@@ -90,6 +90,23 @@
       "src": "floorplans/republic_205-2-8.png",
       "width": 1500,
       "height": 1829
+    }
+  },
+  "masharova-10": {
+    "1": {
+      "src": "floorplans/masharova_10-1.png",
+      "width": 1598,
+      "height": 984
+    },
+    "2": {
+      "src": "floorplans/masharova_10-2.png",
+      "width": 1752,
+      "height": 897
+    },
+    "3": {
+      "src": "floorplans/masharova_10-3.png",
+      "width": 1621,
+      "height": 970
     }
   }
 });

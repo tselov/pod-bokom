@@ -71,20 +71,21 @@ test('Повреждённые данные не публикуются как �
   assert.throws(() => core.validateData(wrong));
 });
 
-test('Новые схемы двух корпусов изолированы, исходные файлы существуют', () => {
+test('Схемы Республики и Машарова изолированы, все 20 исходных файлов существуют', () => {
   assert.deepEqual(Object.keys(plans['1']).map(Number), [1,2,3,4,5,6,7,8,9,10]);
   assert.deepEqual(Object.keys(plans['2']).map(Number), [1,2,3,4,6,7,8]);
   assert.equal(plans['2']['5'], undefined);
+  assert.deepEqual(Object.keys(plans['masharova-10']).map(Number),[1,2,3]);
   const used = new Set();
   for (const [building, sections] of Object.entries(plans)) {
     for (const [section, plan] of Object.entries(sections)) {
-      assert.equal(plan.src, `floorplans/republic_205-${building}-${section}.png`);
+      assert.equal(plan.src, building === 'masharova-10' ? `floorplans/masharova_10-${section}.png` : `floorplans/republic_205-${building}-${section}.png`);
       assert.ok(fs.existsSync(path.join(root, plan.src)));
       assert.ok(plan.width > 0 && plan.height > 0);
       assert.ok(!used.has(plan.src)); used.add(plan.src);
     }
   }
-  assert.equal(used.size, 17);
+  assert.equal(used.size, 20);
 });
 
 test('Адрес Машарова, 10: точные площади из списка, без дома 8 и посторонних объектов', () => {
@@ -93,7 +94,12 @@ test('Адрес Машарова, 10: точные площади из спис
   const expected = [[27,481],[29,572],[36,406],[37,388],[39,406],[51,420],[52,403],[53,339],[87,642],[91,530],[92,543],[94,488],[95,229],[96,239]];
   assert.deepEqual(units.filter(u=>u.area!==null).map(u => [u.number,Math.round(u.area*100)]).sort((a,b)=>a[0]-b[0]),expected);
   assert.equal(units.reduce((s,u)=>s+Math.round(u.area*100),0),6086);
-  assert.ok(units.every(u=>u.building===null && u.section===null && u.plan===null));
+  assert.ok(units.every(u=>u.building===null));
+  for (const unit of units) {
+    assert.equal(unit.section,unit.number<=85 ? 2 : 3);
+    assert.equal(unit.plan,plans['masharova-10'][String(unit.section)].src);
+    assert.ok(fs.existsSync(path.join(root,unit.plan)));
+  }
   assert.ok(!units.some(u=>u.number===19));
   assert.equal(new Set(allData.units.map(u=>u.id)).size,allData.units.length);
   const available = core.filterUnits(allData.units, {addressId:'masharova-10',availability:'available'});
@@ -102,7 +108,8 @@ test('Адрес Машарова, 10: точные площади из спис
   const message = core.composeMessage(available[0],allData);
   assert.match(message,/Николая Машарова, 10/);
   assert.match(message,/стоимость от 5 000 ₽/);
-  assert.doesNotMatch(message,/корпус|секция|null|undefined/);
+  assert.doesNotMatch(message,/корпус|null|undefined/);
+  assert.match(message,/секция 2/);
   assert.equal(core.filterUnits(allData.units,{addressId:'masharova-10',building:'1',availability:'all'}).length,0);
 });
 test('При неизвестном наличии предлагается уточнение, без выдуманной цены и брони', () => {

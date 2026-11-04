@@ -237,7 +237,7 @@
       "id": "masharova-10-53",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 53,
       "area": 3.39,
       "category": "universal",
@@ -245,13 +245,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-92",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 3,
       "number": 92,
       "area": 5.43,
       "category": "spacious",
@@ -259,13 +259,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-3.png"
     },
     {
       "id": "masharova-10-52",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 52,
       "area": 4.03,
       "category": "spacious",
@@ -273,13 +273,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-51",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 51,
       "area": 4.2,
       "category": "spacious",
@@ -287,13 +287,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-91",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 3,
       "number": 91,
       "area": 5.3,
       "category": "spacious",
@@ -301,13 +301,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-3.png"
     },
     {
       "id": "masharova-10-27",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 27,
       "area": 4.81,
       "category": "spacious",
@@ -315,13 +315,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-29",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 29,
       "area": 5.72,
       "category": "spacious",
@@ -329,13 +329,13 @@
       "monthlyOfferPrice": 5000,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-36",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 36,
       "area": 4.06,
       "category": "spacious",
@@ -343,13 +343,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-39",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 39,
       "area": 4.06,
       "category": "spacious",
@@ -357,13 +357,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-94",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 3,
       "number": 94,
       "area": 4.88,
       "category": "spacious",
@@ -371,13 +371,13 @@
       "monthlyOfferPrice": 5000,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-3.png"
     },
     {
       "id": "masharova-10-95",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 3,
       "number": 95,
       "area": 2.29,
       "category": "compact",
@@ -385,13 +385,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-3.png"
     },
     {
       "id": "masharova-10-96",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 3,
       "number": 96,
       "area": 2.39,
       "category": "compact",
@@ -399,13 +399,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-3.png"
     },
     {
       "id": "masharova-10-37",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 2,
       "number": 37,
       "area": 3.88,
       "category": "universal",
@@ -413,13 +413,13 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-2.png"
     },
     {
       "id": "masharova-10-87",
       "addressId": "masharova-10",
       "building": null,
-      "section": null,
+      "section": 3,
       "number": 87,
       "area": 6.42,
       "category": null,
@@ -427,7 +427,7 @@
       "monthlyOfferPrice": null,
       "updatedAt": "2026-11-04",
       "photo": null,
-      "plan": null
+      "plan": "floorplans/masharova_10-3.png"
     }
   ]
 }
