@@ -9,6 +9,7 @@
   const formatPrice = value => Number(value).toLocaleString('ru-RU').replace(/\u00a0/g, ' ');
   function filterUnits(units, filters) {
     return units.filter(unit =>
+      (!filters.addressId || filters.addressId === 'all' || unit.addressId === filters.addressId) &&
       (!filters.building || filters.building === 'all' || String(unit.building) === filters.building) &&
       (!filters.category || filters.category === 'all' || unit.category === filters.category) &&
       (!filters.section || filters.section === 'all' || String(unit.section) === filters.section) &&
@@ -20,11 +21,17 @@
     return unit.monthlyOfferPrice ?? categories[unit.category].monthlyPrice;
   }
   function composeMessage(unit, data) {
-    if (unit.status !== 'available') return null;
+    if (unit.status === 'occupied') return null;
     const address = data.addresses[unit.addressId];
+    const location = `${address.street}, ${address.house}` +
+      (unit.building === null ? '' : `, корпус ${unit.building}`) +
+      (unit.section === null ? '' : `, секция ${unit.section}`);
+    if (unit.status === 'on_request') {
+      return `Здравствуйте! Подскажите, свободна ли кладовая №${unit.number}, ${location}, площадь ${formatArea(unit.area)} м²? Интересуют стоимость аренды и возможность осмотра`;
+    }
     const price = offerPrice(unit, data.categories);
     const from = data.categories[unit.category].priceFrom ? 'от ' : '';
-    return `Здравствуйте! Интересует аренда кладовой №${unit.number}, ${address.street}, ${address.house}, корпус ${unit.building}, секция ${unit.section}, площадь ${formatArea(unit.area)} м², стоимость ${from}${formatPrice(price)} ₽/мес. Хотел бы договориться об осмотре`;
+    return `Здравствуйте! Интересует аренда кладовой №${unit.number}, ${location}, площадь ${formatArea(unit.area)} м², стоимость ${from}${formatPrice(price)} ₽/мес. Хотел бы договориться об осмотре`;
   }
   function telegramLink(message) {
     return `https://t.me/Skladex?text=${encodeURIComponent(message)}`;
@@ -35,9 +42,10 @@
     for (const unit of data.units) {
       const category = data.categories[unit.category];
       if (!unit.id || ids.has(unit.id) || !data.addresses[unit.addressId] || !category ||
-        !['available', 'occupied'].includes(unit.status) || !Number.isFinite(unit.area) ||
+        !['available', 'occupied', 'on_request'].includes(unit.status) || !Number.isFinite(unit.area) ||
         unit.area < category.minArea || unit.area > category.maxArea ||
-        !Number.isInteger(unit.building) || !Number.isInteger(unit.section) || !Number.isInteger(unit.number) ||
+        !(unit.building === null || Number.isInteger(unit.building)) ||
+        !(unit.section === null || Number.isInteger(unit.section)) || !Number.isInteger(unit.number) ||
         !Number.isFinite(offerPrice({ ...unit, status: 'available' }, data.categories))) {
         throw new Error('Проверьте данные кладовой');
       }

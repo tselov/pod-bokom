@@ -16,8 +16,8 @@ if (metricActive) {
 function trackEvent(name, values = {}) {
   // Только свойства каталога. Телефоны клиентов, сообщения и иные ПД сюда не передаются.
   const safe = {};
-  for (const key of ['unitId', 'building', 'category', 'section']) {
-    if (values[key] !== undefined) safe[key] = String(values[key]);
+  for (const key of ['unitId', 'addressId', 'building', 'category', 'section']) {
+    if (values[key] !== undefined && values[key] !== null) safe[key] = String(values[key]);
   }
   document.dispatchEvent(new CustomEvent('skladex:analytics', { detail: { name, params: safe } }));
   if (metricActive && typeof window.ym === 'function') window.ym(metricId, 'reachGoal', name, safe);
@@ -49,14 +49,30 @@ const buildings = {
     "heading": "Республики, 205 · корпус 1",
     "longitude": 65.59686,
     "latitude": 57.12774,
-    "geoUri": "ymapsbm1://geo?data=Cgo2NTkwNjYyMjQyEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoxIgoNlzGDQhXOgmRC"
+    "geoUri": "ymapsbm1://geo?data=Cgo2NTkwNjYyMjQyEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoxIgoNlzGDQhXOgmRC",
+    "addressId": "republic-205",
+    "building": 1,
+    "access": "По магнитному ключу",
+    "loading": "Через подземный паркинг"
   },
   "2": {
     "address": "г. Тюмень, ул. Республики, 205, корпус 2",
     "heading": "Республики, 205 · корпус 2",
     "longitude": 65.598728,
     "latitude": 57.12798,
-    "geoUri": "ymapsbm1://geo?data=Cgo2OTgxNTAwNDIwEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoyIgoNjDKDQhUNg2RC"
+    "geoUri": "ymapsbm1://geo?data=Cgo2OTgxNTAwNDIwEkPQoNC-0YHRgdC40Y8sINCi0Y7QvNC10L3RjCwg0YPQu9C40YbQsCDQoNC10YHQv9GD0LHQu9C40LrQuCwgMjA10LoyIgoNjDKDQhUNg2RC",
+    "addressId": "republic-205",
+    "building": 2,
+    "access": "По магнитному ключу",
+    "loading": "Через подземный паркинг"
+  },
+  "masharova-10": {
+    "addressId": "masharova-10",
+    "building": null,
+    "address": "г. Тюмень, ул. Николая Машарова, 10",
+    "heading": "Николая Машарова, 10",
+    "access": "Уточняется перед арендой",
+    "loading": "Маршрут и разгрузку уточните у владельца"
   }
 };
 
@@ -67,7 +83,7 @@ let refreshPlans = () => {};
 const planRegistry = window.SKLADEX_PLANS || {};
 const getPlan = (building, section) => planRegistry[String(building)]?.[String(section)] || null;
 let catalogData = null;
-const filters = { building: 'all', category: 'all', section: 'all', availability: 'available' };
+const filters = { addressId: 'all', building: 'all', category: 'all', section: 'all', availability: 'available' };
 const grid = document.querySelector('#units-grid');
 const dialog = document.querySelector('#contact-dialog');
 const messageField = document.querySelector('#contact-message');
@@ -88,12 +104,20 @@ const unitObserver = 'IntersectionObserver' in window ? new IntersectionObserver
 
 function buildingAvailability(id) {
   if (!catalogData) return 'Наличие — в каталоге кладовых';
-  const units = catalogData.units.filter(unit => String(unit.building) === id && unit.addressId === 'republic-205');
+  const location = buildings[id];
+  const units = catalogData.units.filter(unit => unit.addressId === location.addressId && (location.building === null || unit.building === location.building));
   const free = units.filter(unit => unit.status === 'available').length;
-  return free ? `Свободно: ${free} из ${units.length}` : `Все ${units.length} кладовых заняты`;
+  const unknown = units.filter(unit => unit.status === 'on_request').length;
+  if (free) return `Свободно: ${free} из ${units.length}`;
+  if (unknown) return `Наличие уточняется: ${unknown} из ${units.length}`;
+  return `Все ${units.length} кладовых заняты`;
+}
+function unitPosition(unit) {
+  return [unit.building === null ? '' : `Корпус ${unit.building}`, unit.section === null ? '' : `Секция ${unit.section}`].filter(Boolean).join(' · ');
 }
 function showContact(message, title, details, trigger, unitId = '') {
   contactTrigger = trigger;
+  document.querySelector('#contact-dialog-eyebrow').textContent = 'ОБРАЩЕНИЕ';
   document.querySelector('#contact-dialog-title').textContent = title;
   document.querySelector('#contact-dialog-details').textContent = details;
   document.querySelector('#contact-copy-status').textContent = '';
@@ -104,11 +128,12 @@ function showContact(message, title, details, trigger, unitId = '') {
 }
 function requestUnit(id, trigger) {
   const unit = catalogData?.units.find(item => item.id === id);
-  if (!unit || unit.status !== 'available') return;
+  if (!unit || unit.status === 'occupied') return;
   const address = catalogData.addresses[unit.addressId];
   const message = core.composeMessage(unit, catalogData);
-  trackEvent('inspection_click', { unitId: unit.id, building: unit.building, category: unit.category, section: unit.section });
-  showContact(message, `Кладовая №${unit.number}`, `${address.city}, ${address.street}, ${address.house} · Корпус ${unit.building} · Секция ${unit.section} · ${core.formatArea(unit.area)} м²`, trigger, unit.id);
+  trackEvent(unit.status === 'available' ? 'inspection_click' : 'availability_click', { unitId: unit.id, addressId: unit.addressId, building: unit.building, category: unit.category, section: unit.section });
+  showContact(message, `Кладовая №${unit.number}`, `${address.city}, ${address.street}, ${address.house}${unitPosition(unit) ? ' · ' + unitPosition(unit) : ''} · ${core.formatArea(unit.area)} м²`, trigger, unit.id);
+  document.querySelector('#contact-dialog-eyebrow').textContent = unit.status === 'available' ? 'ЗАПИСЬ НА ОСМОТР' : 'УТОЧНЕНИЕ НАЛИЧИЯ';
 }
 dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
 dialog.addEventListener('close', () => { if (contactTrigger?.isConnected) contactTrigger.focus(); });
@@ -150,6 +175,8 @@ function safeImagePath(path) {
 }
 function makeUnitCard(unit) {
   const free = unit.status === 'available';
+  const unknown = unit.status === 'on_request';
+  const actionable = free || unknown;
   const card = document.createElement('article');
   card.className = `unit-card${free ? '' : ' unit-occupied'}`;
   card.dataset.unitId = unit.id;
@@ -160,23 +187,23 @@ function makeUnitCard(unit) {
   const heading = q('h3');
   heading.id = `title-${unit.id}`;
   heading.textContent = `Кладовая №${unit.number}`;
-  q('.unit-status').textContent = free ? 'Свободна' : 'Занята';
+  q('.unit-status').textContent = free ? 'Свободна' : unknown ? 'Наличие уточняется' : 'Занята';
   q('.unit-status').classList.toggle('available', free);
   q('.unit-category').textContent = catalogData.categories[unit.category].name;
   q('.unit-address').textContent = `${address.city}, ${address.street}, ${address.house}`;
-  q('.unit-position').textContent = `Корпус ${unit.building} · Секция ${unit.section}`;
+  q('.unit-position').textContent = unitPosition(unit) || 'Расположение уточните у владельца';
   q('dd').textContent = `${core.formatArea(unit.area)} м²`;
   const price = core.offerPrice(unit, catalogData.categories);
-  q('.unit-price').textContent = free ? `${catalogData.categories[unit.category].priceFrom ? 'от ' : ''}${core.formatPrice(price)} ₽/мес.` : 'Помещение занято';
+  q('.unit-price').textContent = free ? `${catalogData.categories[unit.category].priceFrom ? 'от ' : ''}${core.formatPrice(price)} ₽/мес.` : unknown ? 'Цена и наличие — по запросу' : 'Помещение занято';
   const button = q('.unit-inspect');
-  button.textContent = 'Записаться на осмотр';
-  button.setAttribute('aria-label', `Записаться на осмотр кладовой №${unit.number}, корпус ${unit.building}`);
-  button.disabled = !free;
+  button.textContent = unknown ? 'Уточнить наличие' : 'Записаться на осмотр';
+  button.setAttribute('aria-label', `${unknown ? 'Уточнить наличие' : 'Записаться на осмотр'} кладовой №${unit.number}, ${address.street}, ${address.house}${unitPosition(unit) ? ', ' + unitPosition(unit) : ''}`);
+  button.disabled = !actionable;
   button.classList.add(free ? 'button-primary' : 'button-outline');
   button.addEventListener('click', () => requestUnit(unit.id, button));
   const link = q('.unit-chat');
-  link.hidden = !free;
-  if (free) { link.href = core.telegramLink(core.composeMessage(unit, catalogData)); link.dataset.telegram = ''; link.dataset.unitId = unit.id; }
+  link.hidden = !actionable;
+  if (actionable) { link.href = core.telegramLink(core.composeMessage(unit, catalogData)); link.dataset.telegram = ''; link.dataset.unitId = unit.id; }
   const plan = q('.unit-plan');
   if (unit.addressId === 'republic-205' && getPlan(unit.building, unit.section)) {
     const planButton = document.createElement('button');
@@ -191,11 +218,17 @@ function makeUnitCard(unit) {
     plan.append(planButton);
   } else {
     plan.textContent = unit.plan ? 'Схема уточняется у владельца' : 'Схема пока не опубликована';
+    if (unit.addressId === 'masharova-10') {
+      const addressLink = document.createElement('a');
+      addressLink.className = 'text-link unit-map'; addressLink.href = '#location'; addressLink.textContent = 'Посмотреть расположение';
+      addressLink.addEventListener('click', () => setBuilding('masharova-10'));
+      plan.append(addressLink);
+    }
   }
   const photo = safeImagePath(unit.photo);
   if (photo) {
     const image = document.createElement('img');
-    image.src = photo; image.alt = `Кладовая №${unit.number}, корпус ${unit.building}`; image.loading = 'lazy'; image.width = 640; image.height = 400;
+    image.src = photo; image.alt = `Кладовая №${unit.number}, ${address.street}, ${address.house}`; image.loading = 'lazy'; image.width = 640; image.height = 400;
     const icon = q('.unit-pictogram');
     icon.hidden = true;
     q('.unit-media').prepend(image);
@@ -212,19 +245,33 @@ function renderCatalog() {
   document.querySelector('#catalog-count').textContent = `Найдено: ${matches.length} из ${catalogData.units.length}`;
   document.querySelector('#catalog-empty').hidden = matches.length !== 0;
   document.querySelector('#show-all-units').checked = filters.availability === 'all';
-  document.querySelector('#catalog-title').innerHTML = filters.availability === 'available'
-    ? 'Свободные кладовые<br>на Республики, 205'
-    : 'Кладовые<br>на Республики, 205';
+  const address = catalogData.addresses[filters.addressId];
+  const title = filters.availability === 'available' ? 'Свободные кладовые' : 'Кладовые';
+  document.querySelector('#catalog-title').textContent = title + (address ? `: ${address.street}, ${address.house}` : ' в Тюмени');
   if (unitObserver) grid.querySelectorAll('.unit-card:not(.unit-occupied)').forEach(card => unitObserver.observe(card));
 }
 function resetFilters() {
-  Object.assign(filters, { building: 'all', category: 'all', section: 'all', availability: 'available' });
+  Object.assign(filters, { addressId: 'all', building: 'all', category: 'all', section: 'all', availability: 'available' });
   for (const [key, value] of Object.entries(filters)) document.querySelector(`#filter-${key}`).value = value;
+  updateAddressFilters();
   renderCatalog();
+}
+function updateAddressFilters() {
+  if (!catalogData) return;
+  const units = catalogData.units.filter(unit => filters.addressId === 'all' || unit.addressId === filters.addressId);
+  for (const key of ['building', 'section']) {
+    const select = document.querySelector(`#filter-${key}`);
+    const values = [...new Set(units.map(unit => unit[key]).filter(value => value !== null))].sort((a,b) => a-b);
+    select.replaceChildren(new Option(key === 'building' ? 'Все корпуса' : 'Все секции', 'all'), ...values.map(value => new Option(`${key === 'building' ? 'Корпус' : 'Секция'} ${value}`, String(value))));
+    if (!values.map(String).includes(filters[key])) filters[key] = 'all';
+    select.value = filters[key];
+    select.disabled = values.length === 0;
+  }
 }
 for (const name of Object.keys(filters)) {
   document.querySelector(`#filter-${name}`).addEventListener('change', event => {
     filters[name] = event.target.value;
+    if (name === 'addressId') { updateAddressFilters(); trackEvent('address_select', { addressId: filters.addressId }); }
     if (name === 'building') trackEvent('building_select', { building: filters.building });
     if (name === 'category') trackEvent('category_select', { category: filters.category });
     renderCatalog();
@@ -252,12 +299,10 @@ async function loadCatalog() {
     const response = await fetch('units.json', { cache: 'no-store' });
     if (!response.ok) throw new Error('Каталог недоступен');
     catalogData = core.validateData(await response.json());
-    const sectionSelect = document.querySelector('#filter-section');
-    sectionSelect.replaceChildren(new Option('Все секции', 'all'), ...[...new Set(catalogData.units.map(unit => unit.section))].sort((a,b) => a-b).map(n => new Option(`Секция ${n}`, String(n))));
-    sectionSelect.value = filters.section;
-    const buildingSelect = document.querySelector('#filter-building');
-    buildingSelect.replaceChildren(new Option('Все корпуса', 'all'), ...[...new Set(catalogData.units.map(unit => unit.building))].sort((a,b) => a-b).map(n => new Option(`Корпус ${n}`, String(n))));
-    buildingSelect.value = filters.building;
+    const addressSelect = document.querySelector('#filter-addressId');
+    addressSelect.replaceChildren(new Option('Все адреса', 'all'), ...Object.entries(catalogData.addresses).map(([id, address]) => new Option(`${address.street}, ${address.house}`, id)));
+    addressSelect.value = filters.addressId;
+    updateAddressFilters();
     const categorySelect = document.querySelector('#filter-category');
     categorySelect.replaceChildren(new Option('Все категории', 'all'), ...Object.entries(catalogData.categories).map(([id, category]) => new Option(category.name, id)));
     categorySelect.value = filters.category;
@@ -282,16 +327,18 @@ let mapLoadingTimer = null;
 function loadLocationMap(id, force = false) {
   const building = buildings[id];
   if (!building) return;
-  const center = `${building.longitude},${building.latitude}`;
-  const query = new URLSearchParams({mode: 'search', ol: 'geo', ouri: building.geoUri, ll: center, z: '17'});
+  const query = building.geoUri
+    ? new URLSearchParams({mode: 'search', ol: 'geo', ouri: building.geoUri, ll: `${building.longitude},${building.latitude}`, z: '17'})
+    : new URLSearchParams({mode: 'search', text: building.address, z: '17'});
   document.querySelector('#map-external').href = `https://yandex.ru/maps/?${query}`;
-  document.querySelector('#map-route').href = `https://yandex.ru/maps/?rtext=~${building.latitude},${building.longitude}&rtt=auto`;
+  const destination = building.latitude ? `${building.latitude},${building.longitude}` : building.address;
+  document.querySelector('#map-route').href = `https://yandex.ru/maps/?${new URLSearchParams({rtext: `~${destination}`, rtt: 'auto'})}`;
   document.querySelector('#map-backup').href = `https://2gis.ru/tyumen/search/${encodeURIComponent(building.address)}`;
   if (mappedBuilding === id && !force) return;
   mappedBuilding = id;
   clearTimeout(mapLoadingTimer);
   mapStatus.hidden = false;
-  mapStatus.textContent = `Загружаем карту корпуса ${id}…`;
+  mapStatus.textContent = `Загружаем карту: ${building.heading}…`;
   mapFrame.title = `Карта: ${building.address}`;
   mapFrame.src = `https://yandex.ru/map-widget/v1/?${query}`;
   // У iframe другой домен: событие load подтверждает загрузку документа, но не карты внутри него.
@@ -325,14 +372,17 @@ function setBuilding(id) {
   document.querySelector('#building-heading').textContent = building.heading;
   document.querySelector('#building-address').textContent = building.address;
   document.querySelector('#building-request').dataset.building = id;
+  document.querySelector('#location-access').textContent = building.access;
+  document.querySelector('#location-loading').textContent = building.loading;
+  document.querySelector('#building-photo').hidden = building.addressId !== 'republic-205';
   refreshPlans(id);
   loadLocationMap(id);
   const hasPlans = Object.keys(planRegistry[id] || {}).length > 0;
   const plansNotice = document.querySelector('#plans-unavailable');
   plansNotice.hidden = hasPlans;
-  plansNotice.textContent = `Схемы корпуса ${id} пока не опубликованы. Секции кладовых указаны в каталоге.`;
+  plansNotice.textContent = building.addressId === 'republic-205' ? `Схемы корпуса ${id} пока не опубликованы.` : 'Схемы кладовых на Николая Машарова, 10 пока не предоставлены.';
   document.querySelector('#building-availability').textContent = buildingAvailability(id);
-  trackEvent('building_select', { building: id });
+  trackEvent('building_select', { addressId: building.addressId, building: building.building });
 }
 document.querySelectorAll('[data-building-choice]').forEach(button => {
   if (button.hasAttribute('data-photo-choice')) {
