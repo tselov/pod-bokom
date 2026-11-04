@@ -46,7 +46,7 @@
     for (const unit of data.units) {
       const category = data.categories[unit.category];
       const validArea = unit.area === null ? unit.category === null :
-        Number.isFinite(unit.area) && category && unit.area >= category.minArea && unit.area <= category.maxArea;
+        Number.isFinite(unit.area) && unit.area > 0 && (unit.category === null || (category && unit.area >= category.minArea && unit.area <= category.maxArea));
       const price = offerPrice({ ...unit, status: 'available' }, data.categories);
       const validPrice = price === null ? unit.category === null && unit.monthlyOfferPrice === null : Number.isFinite(price) && price > 0;
       if (!unit.id || ids.has(unit.id) || !data.addresses[unit.addressId] || !validArea ||

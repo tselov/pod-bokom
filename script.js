@@ -189,7 +189,7 @@ function makeUnitCard(unit) {
   heading.textContent = `Кладовая №${unit.number}`;
   q('.unit-status').textContent = free ? 'Свободна' : unknown ? 'Наличие уточняется' : 'Занята';
   q('.unit-status').classList.toggle('available', free);
-  q('.unit-category').textContent = catalogData.categories[unit.category]?.name || 'Размер уточняется';
+  q('.unit-category').textContent = catalogData.categories[unit.category]?.name || (unit.area === null ? 'Размер уточняется' : 'Индивидуальный формат');
   q('.unit-address').textContent = `${address.city}, ${address.street}, ${address.house}`;
   q('.unit-position').textContent = unitPosition(unit) || 'Расположение уточните у владельца';
   q('dd').textContent = unit.area === null ? 'Уточняется' : `${core.formatArea(unit.area)} м²`;
@@ -207,13 +207,14 @@ function makeUnitCard(unit) {
   link.hidden = !actionable;
   if (actionable) { link.href = core.telegramLink(core.composeMessage(unit, catalogData)); link.dataset.telegram = ''; link.dataset.unitId = unit.id; }
   const plan = q('.unit-plan');
-  if (unit.addressId === 'republic-205' && getPlan(unit.building, unit.section)) {
+  const planKey = unit.addressId === 'republic-205' ? String(unit.building) : unit.addressId;
+  if (getPlan(planKey, unit.section)) {
     const planButton = document.createElement('button');
     planButton.type = 'button';
     planButton.className = 'text-link';
     planButton.textContent = `Схема секции ${unit.section} ↗`;
     planButton.addEventListener('click', () => {
-      setBuilding(String(unit.building));
+      setBuilding(planKey);
       if (selectPlanSection) selectPlanSection(String(unit.section));
       scrollTo(document.querySelector('#floorplan-panel'));
     });
@@ -416,7 +417,7 @@ function selectSection(id) {
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
   });
-  const heading = `Республики, 205, корпус ${selectedBuilding} · Секция ${id}`;
+  const heading = `${buildings[selectedBuilding].heading} · Секция ${id}`;
   document.querySelector('#floorplan-heading').textContent = heading;
   const preview = document.querySelector('#floorplan-preview');
   preview.width = plan.width;
@@ -425,13 +426,13 @@ function selectSection(id) {
   document.querySelector('#floorplan-error').hidden = true;
   preview.src = plan.src;
   document.querySelector('#floorplan-file').href = plan.src;
-  document.querySelector('#floorplan-caption').textContent = `Корпус ${selectedBuilding}, секция ${id}. Наличие кладовых смотрите в каталоге.`;
+  document.querySelector('#floorplan-caption').textContent = `${heading}. Наличие кладовых смотрите в каталоге.`;
   const request = document.querySelector('#section-request');
   request.dataset.building = selectedBuilding;
   request.dataset.section = String(id);
   document.querySelectorAll('[data-plan-open]').forEach(button => {
     button.disabled = false;
-    button.setAttribute('aria-label', `Увеличить схему: корпус ${selectedBuilding}, секция ${id}`);
+    button.setAttribute('aria-label', `Увеличить схему: ${heading}`);
   });
 }
 selectPlanSection = selectSection;
@@ -440,19 +441,19 @@ refreshPlans = id => {
   const panel = document.querySelector('#floorplan-panel');
   panel.hidden = sections.length === 0;
   if (!sections.length) return;
-  document.querySelector('#plans-eyebrow').textContent = `РЕСПУБЛИКИ, 205 / КОРПУС ${id} / СХЕМ: ${sections.length}`;
+  document.querySelector('#plans-eyebrow').textContent = `${buildings[id].heading.toLocaleUpperCase('ru-RU')} / СХЕМ: ${sections.length}`;
   document.querySelector('#plans-description').textContent = id === '2'
     ? 'Выберите секцию. Доступны схемы секций 1, 2, 3, 4, 6, 7 и 8.'
-    : 'Выберите одну из десяти секций и рассмотрите её схему.';
+    : `Выберите секцию. Доступны схемы: ${sections.join(', ')}.`;
   const picker = document.querySelector('#section-picker');
-  picker.setAttribute('aria-label', `Секции корпуса ${id}`);
+  picker.setAttribute('aria-label', `Секции: ${buildings[id].heading}`);
   picker.replaceChildren(...sections.map(section => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'section-button';
     button.dataset.sectionChoice = section;
     button.textContent = section;
-    button.setAttribute('aria-label', `Секция ${section}, корпус ${id}`);
+    button.setAttribute('aria-label', `Секция ${section}, ${buildings[id].heading}`);
     button.setAttribute('aria-controls', 'floorplan-stage floorplan-heading');
     button.addEventListener('click', () => selectSection(section));
     return button;
@@ -488,11 +489,11 @@ document.querySelectorAll('[data-plan-open]').forEach(button => {
     if (!plan) return;
     const image = document.querySelector('#plan-image');
     image.src = plan.src;
-    image.alt = `Схема кладовых секции ${activeSection}, корпус ${selectedBuilding}`;
+    image.alt = `Схема кладовых: ${buildings[selectedBuilding].heading}, секция ${activeSection}`;
     image.width = plan.width;
     image.height = plan.height;
-    document.querySelector('#plan-dialog-title').textContent = `Корпус ${selectedBuilding} · Секция ${activeSection}`;
-    document.querySelector('#plan-dialog-building').textContent = `РЕСПУБЛИКИ, 205, КОРПУС ${selectedBuilding}`;
+    document.querySelector('#plan-dialog-title').textContent = `${buildings[selectedBuilding].heading} · Секция ${activeSection}`;
+    document.querySelector('#plan-dialog-building').textContent = buildings[selectedBuilding].heading.toLocaleUpperCase('ru-RU');
     document.querySelector('#plan-download').href = plan.src;
     planDialog.showModal();
     setPlanZoom(1);

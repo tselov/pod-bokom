@@ -90,15 +90,15 @@ test('Новые схемы двух корпусов изолированы, и
 test('Адрес Машарова, 10: точные площади из списка, без дома 8 и посторонних объектов', () => {
   core.validateData(allData);
   const units = core.filterUnits(allData.units, { addressId: 'masharova-10', availability: 'all' });
-  const expected = [[27,481],[29,572],[36,406],[37,388],[39,406],[51,420],[52,403],[53,339],[86,525],[91,530],[92,543],[94,488],[95,229],[96,239]];
+  const expected = [[27,481],[29,572],[36,406],[37,388],[39,406],[51,420],[52,403],[53,339],[87,642],[91,530],[92,543],[94,488],[95,229],[96,239]];
   assert.deepEqual(units.filter(u=>u.area!==null).map(u => [u.number,Math.round(u.area*100)]).sort((a,b)=>a[0]-b[0]),expected);
-  assert.equal(units.reduce((s,u)=>s+Math.round(u.area*100),0),5969);
+  assert.equal(units.reduce((s,u)=>s+Math.round(u.area*100),0),6086);
   assert.ok(units.every(u=>u.building===null && u.section===null && u.plan===null));
   assert.ok(!units.some(u=>u.number===19));
   assert.equal(new Set(allData.units.map(u=>u.id)).size,allData.units.length);
   const available = core.filterUnits(allData.units, {addressId:'masharova-10',availability:'available'});
   assert.deepEqual(available.map(u=>u.number).sort((a,b)=>a-b),[29,87,94]);
-  assert.ok(available.filter(u=>u.area!==null).every(u=>u.category==='spacious'));
+  assert.ok(available.filter(u=>u.number!==87).every(u=>u.category==='spacious'));
   const message = core.composeMessage(available[0],allData);
   assert.match(message,/Николая Машарова, 10/);
   assert.match(message,/стоимость от 5 000 ₽/);
@@ -113,15 +113,17 @@ test('При неизвестном наличии предлагается ут
   assert.doesNotMatch(message,/₽|забронирована|корпус null|секция null/);
 });
 
-test('Подтверждённая свободная №87 доступна без выдуманных площади и стоимости', () => {
+test('Опечатка №86 исправлена на №87, площадь 6,42 м² без выдуманной цены', () => {
   const unit=allData.units.find(u=>u.id==='masharova-10-87');
-  assert.equal(allData.units.length,29);
+  assert.equal(allData.units.length,28);
   assert.equal(unit.status,'available');
-  assert.equal(unit.area,null);assert.equal(unit.category,null);assert.equal(unit.monthlyOfferPrice,null);
+  assert.equal(unit.area,6.42);assert.equal(unit.category,null);assert.equal(unit.monthlyOfferPrice,null);
   assert.equal(core.offerPrice(unit,allData.categories),null);
   const message=core.composeMessage(unit,allData);
   assert.match(message,/кладовой №87, Николая Машарова, 10/);
-  assert.match(message,/Подскажите площадь и стоимость аренды/);
+  assert.match(message,/площадь 6,42 м²/);
+  assert.match(message,/Подскажите стоимость аренды/);
+  assert.ok(!allData.units.some(u=>u.addressId==='masharova-10' && u.number===86));
   assert.doesNotMatch(message,/0,00|₽|null|undefined/);
   assert.equal(core.filterUnits(allData.units,{addressId:'masharova-10',availability:'available'}).length,3);
 });
