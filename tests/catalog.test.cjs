@@ -79,7 +79,8 @@ test('Схемы Республики и Машарова изолированы
   const used = new Set();
   for (const [building, sections] of Object.entries(plans)) {
     for (const [section, plan] of Object.entries(sections)) {
-      assert.equal(plan.src, building === 'masharova-10' ? `floorplans/masharova_10-${section}.png` : `floorplans/republic_205-${building}-${section}.png`);
+      const stem=building === 'masharova-10' ? `floorplans/masharova_10-${section}` : `floorplans/republic_205-${building}-${section}`;
+      assert.match(plan.src,new RegExp(`^${stem}(?:-v[0-9]+)?\\.png$`));
       assert.ok(fs.existsSync(path.join(root, plan.src)));
       assert.ok(plan.width > 0 && plan.height > 0);
       assert.ok(!used.has(plan.src)); used.add(plan.src);

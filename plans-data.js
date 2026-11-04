@@ -67,7 +67,7 @@
       "height": 1114
     },
     "3": {
-      "src": "floorplans/republic_205-2-3.png",
+      "src": "floorplans/republic_205-2-3-v2.png",
       "width": 1122,
       "height": 1402
     },
